@@ -30,7 +30,47 @@ AUFS就是讲多个目录转化为自己目录的branch，其中branch可以设�
 ![docker box frame](https://cl.ly/1C1K3J2c0j0J/docker%20box%20frame.png)
 
 AUFS就是相关操作网上一堆，不过推荐直接去主页看:[aufs](http://aufs.sourceforge.net/aufs.html)。
+
 下面从具体的操作过程感受一下：
 
+1,合并a，b文件夹，ab中的文件会显示到union目录中，本例中依照branch添加顺序，第一个branch为mydir，可读写，第二三个branch为a，b,均为只读
+
+![original file tree](https://cl.ly/2k3t091U2l1B/1-original%20tree.png)
+
+    
+	1. workspace$tree                                                                                                                    ----未合并前目录树及文件内容
+	2. .
+	3. ├── a
+	4. │   └── a.txt
+	5. ├── b
+	6. │   └── b.txt
+	7. ├── mydir
+	8. └── uniondir
+	9. 
+
+	10. 4 directories, 2 files
+	11. workspace$cat a/a.txt
+	12. a.txt in a
+	13. workspace$cat b/b.txt
+	14. b.txt in b
+	15. workspace$sudo mount -t aufs -o br=mydir=rw:a=ro:b=ro none uniondir                         ----合并mydir,a,b到uniondir，类型为aufs
+	16. workspace$tree                                                                                                                     ----可以看到a,b做为branch，其下的文件都
+	17. .                                                                                                                                                   显示到了uniondir下,通过文件内容，可
+	18. ├── a                                                                                                                                      以看到就是原文件
+	19. │   └── a.txt
+	20. ├── b
+	21. │   └── b.txt
+	22. ├── mydir
+	23. └── uniondir
+	24.     ├── a.txt
+	25.     └── b.txt
+	26. 
+
+	27. 4 directories, 4 files
+	28. workspace$cat uniondir/a.txt
+	29. a.txt in a
+	30. workspace$cat uniondir/b.txt
+	31. b.txt in b
+	32. workspace$
 
 
