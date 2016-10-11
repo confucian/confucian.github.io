@@ -38,7 +38,7 @@ AUFS就是相关操作网上一堆，不过推荐直接去主页看:[aufs](http:
 ![original file tree](https://cl.ly/2k3t091U2l1B/1-original%20tree.png)
 
     
-	1. workspace$tree                                                                                                                    ----未合并前目录树及文件内容
+	1. workspace$tree                                                                      ----未合并前目录树及文件内容
 	2. .
 	3. ├── a
 	4. │   └── a.txt
@@ -53,10 +53,10 @@ AUFS就是相关操作网上一堆，不过推荐直接去主页看:[aufs](http:
 	12. a.txt in a
 	13. workspace$cat b/b.txt
 	14. b.txt in b
-	15. workspace$sudo mount -t aufs -o br=mydir=rw:a=ro:b=ro none uniondir                         ----合并mydir,a,b到uniondir，类型为aufs
-	16. workspace$tree                                                                                                                     ----可以看到a,b做为branch，其下的文件都
-	17. .                                                                                                                                                   显示到了uniondir下,通过文件内容，可
-	18. ├── a                                                                                                                                      以看到就是原文件
+	15. workspace$sudo mount -t aufs -o br=mydir=rw:a=ro:b=ro none uniondir                ----合并mydir,a,b到uniondir，类型为aufs
+	16. workspace$tree                                                                     ----可以看到a,b做为branch，其下的文件都显示到了uniondir下,通过文件内容，可以看到就是原文件
+	17. .                                                                                                                                                   
+	18. ├── a                                                                                                                                     
 	19. │   └── a.txt
 	20. ├── b
 	21. │   └── b.txt
@@ -73,4 +73,150 @@ AUFS就是相关操作网上一堆，不过推荐直接去主页看:[aufs](http:
 	31. b.txt in b
 	32. workspace$
 
+2, 由于最上层branch，mydir为可读写，因此按照默认的branch选择策略，在上层文件夹中任何修改，都会体现在最上层的branch中。比如在uniondir中修改b.txt，会选择最高优先级branch，mydir，然后依据copy on write, 把下层branch，b，中的b.txt拷贝到mydir中，然后再修改。
 
+如果是直接修改下层的branch，比如直接修改b/b.txt，那上层也会立即改变。
+
+![modify b.txt](https://cl.ly/3j1G1T123E41/modify%20b.png)
+
+    
+	1. workspace$echo 'b.txt modified in uniondir' > uniondir/b.txt                        -----aufs中修改b文件
+	2. workspace$tree
+	3. .
+	4. ├── a
+	5. │   └── a.txt
+	6. ├── b
+	7. │   └── b.txt
+	8. ├── mydir
+	9. │   └── b.txt
+	10. └── uniondir
+	11.     ├── a.txt
+	12.     └── b.txt
+	13. 
+
+	14. 4 directories, 5 files
+	15. workspace$cat uniondir/b.txt                                                      -----aufs的uniondir显示b文件已修改
+	16. b.txt modified in uniondir
+	17. workspace$cat mydir/b.txt                                                         -----最上层branch，mydir，拷贝了一份b文件，并被修改
+	18. b.txt modified in uniondir
+	19. workspace$cat b/b.txt                                                             -----原只读分支的b文件保持不变
+	20. b.txt in b
+	21. workspace$
+
+3, 新建文件原理同修改文件，如果在上层目录，uniondir，创建，则在上层branch，mydir，中新增改文件。
+
+![add new c.txt](https://cl.ly/2f1r0T2K0E3S/add%20new%20c.png)
+    
+	1. workspace$mkdir uniondir/c.txt
+	2. workspace$tree
+	3. .
+	4. ├── a
+	5. │   └── a.txt
+	6. ├── b
+	7. │   └── b.txt
+	8. ├── mydir
+	9. │   ├── b.txt
+	10. │   └── c.txt
+	11. └── uniondir
+	12.     ├── a.txt
+	13.     ├── b.txt
+	14.     └── c.txt
+	15. 
+
+
+	16. 6 directories, 5 files
+	17. workspace$   
+
+4, 上层目录删除文件，不影响下层文件，只是在上层branch中新增whiteout屏蔽下层branch中的文件，.wh.b.txt。
+
+     
+	1. workspace$rm uniondir/b.txt
+	2. workspace$tree
+	3. .
+	4. ├── a
+	5. │   └── a.txt
+	6. ├── b
+	7. │   └── b.txt
+	8. ├── mydir
+	9. │   └── c.txt
+	10. └── uniondir
+	11.     ├── a.txt
+	12.     └── c.txt
+	13. 
+
+	14. 6 directories, 3 files
+	15. workspace$ls -al uniondir
+	16. total 16
+	17. drwxrwxr-x 7 wrsadmin wrsadmin 4096  2月 12 15:57 .
+	18. drwxrwxr-x 6 wrsadmin wrsadmin 4096  2月 12 15:06 ..
+	19. -rw-rw-r-- 1 wrsadmin wrsadmin   11  2月 12 15:48 a.txt
+	20. drwxrwxr-x 2 wrsadmin wrsadmin 4096  2月 12 15:55 c.txt
+	21. workspace$ls -al mydir
+	22. total 20
+	23. drwxrwxr-x 5 wrsadmin wrsadmin 4096  2月 12 15:57 .
+	24. drwxrwxr-x 6 wrsadmin wrsadmin 4096  2月 12 15:06 ..
+	25. drwxrwxr-x 2 wrsadmin wrsadmin 4096  2月 12 15:55 c.txt
+	26. -r--r--r-- 2 root     root        0  2月 12 14:50 .wh.b.txt
+	27. -r--r--r-- 2 root     root        0  2月 12 14:50 .wh..wh.aufs
+	28. drwx------ 2 root     root     4096  2月 12 14:50 .wh..wh.orph
+	29. drwx------ 2 root     root     4096  2月 12 14:50 .wh..wh.plnk
+	30. workspace$
+
+至此，就大概了解了aufs的原理以及使用方法，这也是我能找到的所有资料了。但这实在不符合屌丝风格，知其然不知其所以然的感觉，内心是在不爽，那细节一点的原理是怎样的呢。
+
+具体来说，linux中，通常的下层文件系统都是注册到VFS下，如pic1，VFS做为上层upper，负责将用户态的操作转换并分发到下层bottom的文件系统，比如ext2，NFS等等，由bottom层文件系统继续操作具体器件。
+
+![VFS module](https://cl.ly/2J0C223N3o0J/VFS%20module.png)
+
+AUFS，如同unionfs之类的stackable文件系统，地位不同于ext2等文件系统，如pic2，它如同中间层，对VFS来说，它像普通的bottom层文件系统一样，接收VFS下发的操作，并转发给下层，并且将bottom文件系统的内存虚拟的合并在一起，显示给VFS。而对普通的bottom层文件系统，如ext2，NFS来说，它又想VFS一样，承担上层操作的转换，分支选择及分发的工作。所以aufs需要使VFS以及bottom文件系统都不感知它的存在，仍然像VFS直接面对bottom文件系统一样。
+
+![pic2 VFS module](https://cl.ly/2W3Y2h3m3T16/pic2%20VFS%20module.png)
+
+那么如何实现上图中的wrap功能的呢？VFS的关键元素包括：mount point，super block，dentry，inode，以及fd，file，他们之间的关系，可以解释如下:
+
+![VFS frame](https://cl.ly/2A2e1r290D2l/VFS%20frame.png)
+
+已之前的例子为例，简单表示为：
+
+![node frame of original tree](https://cl.ly/3x0k2X15373O/node%20frame%20of%20original%20tree.png)
+
+这是mount aufs之前的简单示例。当mount aufs之后，在union目录新增一个mount point，结构就变成了下面这样:
+
+![node frame of add mount point](https://cl.ly/2U2B1Y2T340h/node%20frame%20of%20add%20mount%20point.png)
+
+这是我们来尝试在union目录下修改b.txt, 看一下具体的过程。
+
+1，首先当然要查找了，查找b.txt，查找是nd记录当前查到的最新路径的dentry和inode，首先dentry指向union的dentry
+     
+2，发现union的dentry是mounted的，所以指向新的mount point，这里就是aufs的mount point以及dentry
+
+3，此时aufs的dentry要轮询所有的branch，因此从branch1开始，指向ext2下mydir的dentry，通过ext2的操作函数在ext2中真正查找，没有
+
+4，查branch2，指向ext2下a目录的dentry，通过ext2的操作函数在ext2中真正查找，没有
+
+5，查branch3，指向ext2下b目录的dentry，通过ext2的操作函数在ext2中真正查找，查到了b.txt
+
+6，aufs中查到了存在要找的b.txt，所以创建新的inode，并将其oprations设置为aufs的oprations。
+
+![node frame of 1~6](https://cl.ly/2v3G3l0j2s2i/node%20frame%20of%201%20~6.png)
+
+7，真正修改b.txt时，从当前aufs目录的branch中按照写的policy，就是写时选择branch的方法，比如默认为top down parent，意思就是从最高优先级到低优先级branch依次选择可写branch，在此例中我们只有第1个branch，mydir这个branch是可写的，因此只能选择branch1。通过branch1的dentry指向真正ext2中mydir的dentry，按照ext2的操作方式，因为此目录下没有b.txt，所以需要把b.txt所在的原branch上相关的路径全部copyup过来，这就是所谓的写时复制。同样copyup遵循一定的policy，选择源分支，此例较简单，只有branch3是源分支。这就需要把源b.txt相关的dentry以及inode都在mydir下拷贝一份，这就是7和8所表示的新的dentry和inode
+
+8，上步已经说明
+
+9，在aufs中建立inode的branch数组，并将其中的inode branch指向新建的inode，然后修改相应的内容到新的inode
+
+![node frame of 7~9](https://cl.ly/0G1f1G1d0y0M/node%20frame%20of%207~9.png)
+
+至此，修改文件就完成了。
+
+这里涉及到的dentry及inode的查找过程的branch轮询，修改过程中的的写时复制，copyup都有了大致的说明。
+总的含义就是下级的多个文件分别为一个branch，选择合适的branch进行修改。
+
+应用到docker，就是下层所有的，目录均为只读，只有最上层目录为可写，这样所有的修改都会实现在最上层的目录中。每一层目录即是一个image，这样基础的image可以保持不变，只要将最上层的目录，打包成变化部分的image，就可以实现发布标准image，并在其上快速简历个性image环境的需求。
+
+![aufs change process1](https://cl.ly/3c1n1n0x3Y0e/aufs%20change%20process1.png)
+
+![aufs change process](https://cl.ly/3k452G2p3541/aufs%20change%20process.png)
+
+这样就大致说清了aufs的具体实现，至于代码流程，可有可无了，有时间再补充吧。
