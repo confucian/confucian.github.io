@@ -29,7 +29,7 @@ AUFS就是讲多个目录转化为自己目录的branch，其中branch可以设�
 
 ![docker box frame](https://cl.ly/1C1K3J2c0j0J/docker%20box%20frame.png)
 
-AUFS就是相关操作网上一堆，不过推荐直接去主页看:aufs。
+AUFS就是相关操作网上一堆，不过推荐直接去主页看:[aufs](http://aufs.sourceforge.net/aufs.html)。
 下面从具体的操作过程感受一下：
 
 
