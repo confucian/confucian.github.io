@@ -38,9 +38,7 @@ tags:
        branch。
        利用docker的一张image的图，比较形象的解释了层叠文件系统的情况，每一层都可以是一个aufs的branch。感受
        一下:
- <center>
 
 ![docker box frame](https://cl.ly/1C1K3J2c0j0J/docker%20box%20frame.png)
 
-</center>
-sss  
+sss1
