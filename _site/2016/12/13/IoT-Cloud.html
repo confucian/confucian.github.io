@@ -10,7 +10,7 @@
     <meta name="keywords"  content="Still Nothing">
     <meta name="theme-color" content="#000000">
     
-    <title>AUFS - alviny Blog</title>
+    <title>搭建基于私有云的虚拟化IoT平台 - alviny Blog</title>
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="/pwa/manifest.json">
@@ -19,7 +19,7 @@
     <link rel="shortcut icon" href="/img/favicon.ico">
     
     <!-- Canonical URL -->
-    <link rel="canonical" href="alviny.net/2015/03/04/AUFS.html">
+    <link rel="canonical" href="alviny.net/2016/12/13/IoT-Cloud.html">
 
     <!-- Bootstrap Core CSS -->
     <link rel="stylesheet" href="/css/bootstrap.min.css">
@@ -170,15 +170,19 @@
                 <div class="post-heading">
                     <div class="tags">
                         
-                        <a class="tag" href="/tags/#aufs" title="aufs">aufs</a>
+                        <a class="tag" href="/tags/#docker" title="docker">docker</a>
+                        
+                        <a class="tag" href="/tags/#IoT" title="IoT">IoT</a>
+                        
+                        <a class="tag" href="/tags/#cloud" title="cloud">cloud</a>
                         
                     </div>
-                    <h1>AUFS</h1>
+                    <h1>搭建基于私有云的虚拟化IoT平台</h1>
                     
                     
                     <h2 class="subheading"></h2>
                     
-                    <span class="meta">Posted by alvin Y on March 4, 2015</span>
+                    <span class="meta">Posted by alvin Y on December 13, 2016</span>
                 </div>
             </div>
         </div>
@@ -196,11 +200,22 @@
                 col-md-10 col-md-offset-1
                 post-container">
 
-				<p>AUFS可能是受到不会进入linux主线的传言影响，资料真是难找，除了主页以外，比较少有细节的资料供参考。但是眼下docker这么火的技术，要是光用，真心不符合我等Diors的内心需求，不搞清楚点到底什么东西，最起码原理是什么样子，真心不踏实。</p>
+				<pre><code> IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长的连通性，通过互联网进行连接的各种各样的嵌入式传感器、设备及系统。IoT不仅包括现有的机器间通信，并延伸包括更多的分析及面向消费者的产品，从Google Glass到智能电器，在到生产环节的各种设备控制及分析。
+ 如何实现这种快速连通，利用现有IT资源，通过云来实现资源的动态扩容，快速部署，合理应用是当前的大趋势。
+ 那是基于公有云还是私有云？公有云必然是资源最合理的应用，但是私有云有其存在的优势：
+ 1，安全性
+ 私有云能对数据安全提供有效的控制。为单一客户而构建，因而提供对数据、安全性和服务质量的最有效控制。对企业而言，尤其是大型企业而言，业务数据是其核心，是不能受到任何形式 的威胁的，这也决定了大型企业是不会将其 Mission-Critical的应用放到公有云上运行的。私有云可部署在企业数据中心的防火墙内，也可以将它们部署在一个安全的主机托管场所，这正是 私有云在安全方面的优势。
+ 2，部署方式灵活
+ 部署方式灵活可以从两个方面来体现，其一是公司拥有基础设施，并可以控制在此基础设施上部署应用程序的方式；其二是私有云可由公司自行构建，可以通过云提供商构建；其三是部署的业务架构灵活，自由选择整个部署的结构。
+ 3，更高的服务质量
+ 因为私有云一般在防火墙之后，而不是在某一个遥远的数据中心中，所以当公司员工访问那些基于私有云的应用时，它的SLA应该会非常稳定，不会受到网络不稳定的影响，比如亚马逊提供的服务断网以后，有几万名的客户受到了影响。
+ 4，充分利用现有硬件资源和软件资源
 
-<p>只好自己去浏览源码了。</p>
+ 云不是万能的，这份调查显示当前的私有云依然有很大的发展趋势。Gartner 资深分析师Tom Bittman ：“每个云服务都将有不同的未来发展路线图--一些云服务应与业务更紧密地整合、定制化和多样化为重点。而另外一些应侧重在独立、简单接口、标准化和非 定制化上。私有云计算中的许多投资可为企业部署公共云计算做准备。这些投资不仅仅是技术上的变化，也是流程、文化和业务接口上的变化。决定这些改变宜早不宜迟，这将帮助企业更好地实施云采购的决策，同时也很可能使企业顺利地过渡到公共云计算上。
 
-<p>但说句真心话，出身决定命运，我作为vxworks出身的人，对linux的命名风格真是打心里想问候他娘。</p>
+ 搭建私有云，现在有很多商业化选择，比如openstack的商业化版本，基于kvm的虚拟化。很多知名大企业都提供系统解决方案。所谓无利不起早，搭建成本和开销都可想而知。伺候大企业，比如中移动，中联通这种还尚且能提供优惠，比如开发免费，部署优惠，目的无非是占领市场，建立生态圈，提高后来者的技术和非技术门槛。所以对于小企业，无论是成本，技术复杂度，还是开销，都是无法接受的。
+ 这里就要提到container虚拟化，docker及其相应的部署技术，kubernetes，提供了一套低成本，低复杂度，低开销的虚拟化部 ![High Level Architecture](https://d17oy1vhnax1f7.cloudfront.net/items/1g3t032i1f2J3l2P3F39/High%20Level%20Architecture.png?v=6f0b28c5)
+</code></pre>
 
 <hr />
 
@@ -426,11 +441,11 @@
                 <!-- 多说 Share start -->
                 <div class="ds-share"
                     style="text-align: right"
-                    data-thread-key="/2015/03/04/AUFS"
-                    data-title="AUFS"
-                    data-url="alviny.net/2015/03/04/AUFS.html"
+                    data-thread-key="/2016/12/13/IoT-Cloud"
+                    data-title="搭建基于私有云的虚拟化IoT平台"
+                    data-url="alviny.net/2016/12/13/IoT-Cloud.html"
                     data-images="alviny.net/img/home-bg.jpg"
-                    data-content="AUFS可能是受到不会进入linux主线的传言影响，资料真是难找，除了主页以外，比较少有细节的资料供参考。但是眼下docker这么火的技术，要是光用，真心... | alviny Blog " >
+                    data-content=" IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长的连通性，通过互联网进行连接的各种各样的嵌入式传感器、设备及系统。IoT不仅包括现有的机器间通信... | alviny Blog " >
                     <div class="ds-share-inline">
                       <style> 
                         .ds-share-icons-16 {display:none;} 
@@ -452,13 +467,13 @@
 
                 <ul class="pager">
                     
-                    
-                    <li class="next">
-                        <a href="/2016/12/13/IoT-Cloud.html" data-toggle="tooltip" data-placement="top" title="搭建基于私有云的虚拟化IoT平台">
-                        Next<br>
-                        <span>搭建基于私有云的虚拟化IoT平台</span>
+                    <li class="previous">
+                        <a href="/2015/03/04/AUFS.html" data-toggle="tooltip" data-placement="top" title="AUFS">
+                        Previous<br>
+                        <span>AUFS</span>
                         </a>
                     </li>
+                    
                     
                 </ul>
 
@@ -467,9 +482,9 @@
                 <!-- 多说评论框 start -->
                 <div class="comment">
                     <div class="ds-thread"
-                        data-thread-key="/2015/03/04/AUFS"
-                        data-title="AUFS"
-                        data-url="alviny.net/2015/03/04/AUFS.html" >
+                        data-thread-key="/2016/12/13/IoT-Cloud"
+                        data-title="搭建基于私有云的虚拟化IoT平台"
+                        data-url="alviny.net/2016/12/13/IoT-Cloud.html" >
                     </div>
                 </div>
                 <!-- 多说评论框 end -->

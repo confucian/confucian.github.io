@@ -1,0 +1,478 @@
+---
+layout: post
+title: 搭建基于私有云的虚拟化IoT平台
+permalink: /:categories/:year/:month/:day/:title.html
+description: 
+date: 2016-12-13 10:22:22 +08:00
+tags: 
+    docker IoT cloud
+---
+IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长的连通性，通过互联网进行连接的各种各样的嵌入式传感器、设备及系统。IoT不仅包括现有的机器间通信，并延伸包括更多的分析及面向消费者的产品，从Google Glass到智能电器，在到生产环节的各种设备控制及分析。
+ 
+如何实现这种快速连通，利用现有IT资源，通过云来实现资源的动态扩容，快速部署，合理应用是当前的大趋势。
+***
+那是基于公有云还是私有云？公有云必然是资源最合理的应用，但是私有云有其存在的优势：
+
+1，安全性
+
+私有云能对数据安全提供有效的控制。为单一客户而构建，因而提供对数据、安全性和服务质量的最有效控制。对企业而言，尤其是大型企业而言，业务数据是其核心，是不能受到任何形式 的威胁的，这也决定了大型企业是不会将其 Mission-Critical的应用放到公有云上运行的。私有云可部署在企业数据中心的防火墙内，也可以将它们部署在一个安全的主机托管场所，这正是 私有云在安全方面的优势。
+   
+2，部署方式灵活
+   
+部署方式灵活可以从两个方面来体现，其一是公司拥有基础设施，并可以控制在此基础设施上部署应用程序的方式；其二是私有云可由公司自行构建，可以通过云提供商构建；其三是部署的业务架构灵活，自由选择整个部署的结构。
+   
+3，更高的服务质量
+   
+因为私有云一般在防火墙之后，而不是在某一个遥远的数据中心中，所以当公司员工访问那些基于私有云的应用时，它的SLA应该会非常稳定，不会受到网络不稳定的影响，比如亚马逊提供的服务断网以后，有几万名的客户受到了影响。
+   
+4，充分利用现有硬件资源和软件资源
+
+云不是万能的，这份调查显示当前的私有云依然有很大的发展趋势。Gartner 资深分析师Tom Bittman ：“每个云服务都将有不同的未来发展路线图--一些云服务应与业务更紧密地整合、定制化和多样化为重点。而另外一些应侧重在独立、简单接口、标准化和非 定制化上。私有云计算中的许多投资可为企业部署公共云计算做准备。这些投资不仅仅是技术上的变化，也是流程、文化和业务接口上的变化。决定这些改变宜早不宜迟，这将帮助企业更好地实施云采购的决策，同时也很可能使企业顺利地过渡到公共云计算上。
+
+搭建私有云，现在有很多商业化选择，比如openstack的商业化版本，基于kvm的虚拟化。很多知名大企业都提供系统解决方案。所谓无利不起早，搭建成本和开销都可想而知。伺候大企业，比如中移动，中联通这种还尚且能提供优惠，比如开发免费，部署优惠，目的无非是占领市场，建立生态圈，提高后来者的技术和非技术门槛。所以对于小企业，无论是成本，技术复杂度，还是开销，都是无法接受的。
+*** 
+这里就要提到container虚拟化，docker及其相应的部署技术，kubernetes，提供了一套低成本，低复杂度，低开销的虚拟化部署方案。
+ 
+下列架构图展示了数据中心层和网关端的相关组件。下文架构详情一节提供了进一步介绍。
+
+![High Level Architecture](https://d17oy1vhnax1f7.cloudfront.net/items/1g3t032i1f2J3l2P3F39/High%20Level%20Architecture.png?v=6f0b28c5)
+图1: High Level Architecture    
+
+ 传感器
+   
+ 任意用来阅读环境数据（温度，湿度，二氧化碳水平），对象，计数等等的传感器。处于边缘的可以是传感器，设备来获取到终端数据，与cloud server进行交互和控制，包括tcp，CoAP，MQTT，websocket，甚至http。
+   
+ 网关
+   
+ 在物联网网关，处理从传感器传来的数据。这里可以是旧设备，添加与cloud的连接方式，也可以是新的包含container虚拟化的设备，任意的x86/64或者ARM架构，都可以以最小性能损失部署container从预构建镜像方面来运行系统。
+   
+ 网络
+   
+ 网关可通过任意网络连接（GSM/LTE/WiFi/Ethernet），通过适合IoT设备的协议与Cloud建立连接，包括MQTT, CoAP, TCP/IP, HTTP...。
+   
+ 云server
+   
+ 云server部署IoT所需的服务，这里可以是OpenStack或者docker的部署方案Kubernetes。可部署web服务以及RESTFUL API，供web以及app访问及控制。
+   
+ 上图中，部署方式1为公有云端+本地设备+传感器。
+   
+ 部署方式2为公有云端+本地网关（虚拟化/非虚拟化）+传感器。
+   
+ 部署方式3为私有云端+本地设备+传感器/私有云端+传感器
+   
+ 这里通常的KVM虚拟化，如OpenStack因为kvm自身的开销以及应用所需的性能，通常都部署在cloud端，且采用高性能服务器。gateway实现数据的采集及初步处理，相应的实时性部分也通常只能部署在gateway及以下。
+   
+ 而小开销的container初始化则可以部署在cloud侧，gateway上甚至中断嵌入式设备中。同时虚拟化下沉到网关甚至设备侧，可以通过享受统一部署（比如kubernetes统一管理），以及微服务隔离（比如docker container隔离），动态减扩容等好处。
+   
+ 所以如果KVM虚拟化只适合上图中部署方式1的话，基于container的虚拟化则3中部署方式都使用。
+
+![Cloud Gateway Detail](https://d17oy1vhnax1f7.cloudfront.net/items/0p0d3U0Y0k1m252B2k0L/Cloud%20Gateway%20Detail.png?v=f046d676)
+
+图2: Cloud/Gateway Detail
+
+ 具体到container虚拟化的cloud，gateway或者设备，采用kubernetes部署的方式，通过service进行服务和后端虚拟服务的隔离以及初步的负载均衡。这样保证服务的稳定性，扩容便利，升级便利以及新服务便利部署。
+   
+ 所以这里我尝试搭建了一套基于kubernetes的虚拟化IoT平台demo。
+   
+ IoT cloud server侧：
+   
+ 1，以docker container方式提供虚拟化环境。通过kubernetes进行编排，部署和管理，对外提供container的管理界面服务。
+   
+ 2，搭建tcp server接收设备端的定时温度数据，保留特定数据，并按时间存储。
+   
+ 3，搭建radis数据库存储用户注册数据以及各温度传感器数据
+   
+ 4，搭建http server，对外提供IoT cloud server管理界面，动态显示radis数据库中存储的温度数据及历史曲线。
+   
+ 5，各个服务通过复制管理确保服务不间断性。
+   
+ 6，部署OVS，通常的tunnel方式可以满足服务形式的部署，只开放部分端口。如果提供虚拟的host环境，比如基于ubuntu主机，提供多套虚拟的ubuntu环境，OVS可以简单的放开所需的大量服务，而不改变用户的使用习惯。另外，多台连接时，tunnel需要大量的配置，扩容和维护不易。
+   
+ 7，对外提供虚拟host环境
+   
+ 设备端：
+ 
+ 最简单的是使用raspberry pi来部署温度监控，demo想要实现比较简单的tcp通信，所以以模拟客户端形式将温度数据发送到tcp server去。
+ 
+ 访问端： 
+
+ 提供web访问，并显示温度曲线。
+
+![demo architechture](https://d17oy1vhnax1f7.cloudfront.net/items/0C262f0G0G2J1X3j2M1x/demo%20architecture.png?v=65066208)
+
+图 demo architecture
+
+ 基本原材料：
+   
+  主机：pc或者server，抑或虚拟机
+   
+  操作系统：ubuntu 14.04 LTS
+   
+  虚拟化：docker container
+   
+  虚拟化管理：kubernetes + OVS
+   
+  demo应用：温度监控+主机环境
+   
+   1,温度监控器数据传输和储存，以及web管理界面的显示。
+ 
+   2,主机环境即标准的机主环境。
+
+ 之所以这里提及主机环境可以基于虚拟机，可以充分显示基于container虚拟化的微小开销。这是基于kvm所无法比拟的。
+   
+**1, Host cluster**
+   
+这里使用虚拟机组件三台host。虚拟机可以通过vagrant搭建：vagrant搭建虚拟实验环境。
+ 
+宿主机ubuntu。
+ 
+	1.1 安装virtualbox
+    	sudo apt-get install virtualbox
+	1.2 下载vagrant_1.8.5_x86_64.deb
+        默认源中的vagrant似乎版本太低，所以手动下载并安装1.8.5版本。
+    1.3 通过如下vagrantfile作为配置文件，启动三台虚拟机，其中apiserver两个网卡，minions各一个网卡
+        制作以标准ubuntu 14.04安装docker组件为初始镜像
+        以ubuntu/trusty64为镜像启动标准ubuntu 14.04
+        在镜像中安装docker
+————
+ 
+	1. sudo  apt-get update
+	2. sudo apt-get install apt-transport-https ca-certificates
+	3. sudo apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+	4. sudo touch /etc/apt/sources.list.d/docker.list
+	1. sudo echo "deb https://apt.dockerproject.org/repo ubuntu-trusty main" | grep tee /etc/apt/sources.list.d/docker.list
+	1. sudo apt-get purge lxc-docker
+	1. #sudo apt-cache policy docker-engine
+	1. sudo apt-get install linux-image-extra-$(uname -r)
+	1. sudo apt-get update
+	1. sudo apt-get install docker-engine
+
+   生成标准镜像
+ 	
+	vagrant package --base basevm --output boxname
+	vagrant box add "box show name" "box path and name"
+____
+
+	# -*- mode: ruby -*-
+	# # vi: set ft=ruby :
+
+	require 'fileutils'
+	require 'open-uri'
+	require 'tempfile'
+	require 'yaml'
+
+	Vagrant.require_version ">= 1.6.0"
+
+	$apiserver_count = 1
+	$apiserver_vm_memory = 2048
+	$minion_count = 2
+	$minion_vm_memory = 512
+
+
+	APISERVER_CLUSTER_IP="10.3.0.1"
+
+	def apiserverIP(num)
+  		return "172.17.4.#{num+100}"
+	end
+
+	def minionIP(num)
+  		return "172.17.4.#{num+200}"
+	end
+
+	apiserverIPs = [*1..$apiserver_count].map{ |i| apiserverIP(i) } <<  APISERVER_CLUSTER_IP
+
+	# Generate root CA
+	system("mkdir -p ssl && ./../../lib/init-ssl-ca ssl") or abort ("failed generating SSL artifacts")
+
+	# Generate admin key/cert
+	system("./../../lib/init-ssl ssl admin kube-admin") or abort("failed generating admin SSL artifacts")
+
+	def provisionMachineSSL(machine,certBaseName,cn,ipAddrs)
+  		tarFile = "ssl/#{cn}.tar"
+  		ipString = ipAddrs.map.with_index { |ip, i| "IP.#{i+1}=#{ip}"}.join(",")
+  		system("./../../lib/init-ssl ssl #{certBaseName} #{cn} #{ipString}") or abort("failed generating #{cn} SSL artifacts")
+  		machine.vm.provision :file, :source => tarFile, :destination => "/tmp/ssl.tar"
+  		machine.vm.provision :shell, :inline => "mkdir -p /etc/kubernetes/ssl && tar -C /etc/kubernetes/ssl -xf /tmp/ssl.tar", :privileged => true
+	end
+
+	Vagrant.configure("2") do |config|
+  		# always use Vagrant's insecure key
+  		config.ssh.insert_key = false
+
+  		config.vm.box = "ubuntu/trusty64" #"ubuntu-docker"
+  		config.vm.box_version = ">= 0"
+
+  		config.vm.provider :virtualbox do |v|
+    		# On VirtualBox, we don't have guest additions or a functional vboxsf
+    	v.check_guest_additions = false
+    	v.functional_vboxsf     = false
+  	end
+
+  	# plugin conflict
+  	if Vagrant.has_plugin?("vagrant-vbguest") then
+    	config.vbguest.auto_update = false
+  	end
+
+  	["vmware_fusion", "vmware_workstation"].each do |vmware|
+    	config.vm.provider vmware do |v|
+      	v.vmx['numvcpus'] = 2
+      	v.gui = false
+    	end
+  	end
+
+  	config.vm.provider :virtualbox do |vb|
+    	vb.cpus = 2
+    	vb.gui = false
+  	end
+
+
+  	(1..$apiserver_count).each do |i|
+    	config.vm.define vm_name = "apiserver%d" % i do |apiserver|
+
+      		apiserver.vm.hostname = vm_name
+
+      		["vmware_fusion", "vmware_workstation"].each do |vmware|
+        		apiserver.vm.provider vmware do |v|
+          			v.vmx['memsize'] = $apiserver_vm_memory
+        		end
+      		end
+
+      		apiserverIP = apiserverIP(i)
+      		apiserver.vm.network :private_network, ip: apiserverIP
+      		apiserver.vm.network :private_network, ip: "11.11.11.11"
+
+      		apiserver.vm.provider :virtualbox do |vb|
+        		vb.memory = $apiserver_vm_memory
+				vb.customize ["modifyvm", :id, "--nicpromisc3", "allow-all"]
+      		end
+
+      		# Each controller gets the same cert
+      		provisionMachineSSL(apiserver,"apiserver","kube-apiserver-#{apiserverIP}",apiserverIPs)
+
+    	end
+  	end
+
+  	(1..$minion_count).each do |i|
+    	config.vm.define vm_name = "minion%d" % i do |minion|
+      		minion.vm.hostname = vm_name
+
+      		["vmware_fusion", "vmware_workstation"].each do |vmware|
+        		minion.vm.provider vmware do |v|
+          			v.vmx['memsize'] = $minion_vm_memory
+        		end
+      		end
+
+      		minion.vm.provider :virtualbox do |vb|
+        		vb.memory = $minion_vm_memory
+      		end
+
+      		minionIP = minionIP(i)
+      		minion.vm.network :private_network, ip: minionIP
+
+      		provisionMachineSSL(minion,"worker","kube-worker-#{minionIP}",[minionIP])
+
+    	end
+  	end
+
+	end
+
+
+**特别步骤**：
+
+	1.4 如果是部署在物理机上，或者公有云上的vhost上，那一般可以购买loadbalancer来提供外部访问的入口。简单功能性demo的情况下，只是vm组成的host，没有外部的loadbalancer，这里就开放master上的eth1给外部访问。
+
+	1.5 虚拟机cluster的环境下，通过vagrant和virtualbox组建，实际通信是通过默认的vboxnet0实现的。简单模拟外部访问和管理网络，使master上eth1通过vboxnet1访问。这里需要设置路由，将eth1网段路由添加到vboxnet1上去，同时master上的路由也需要修改。
+
+***
+
+**2，Deploy kubernetes on host cluster**
+
+基于kubernetes-1.3.4构建。
+
+master运行三个组件：
+
+
+
+* apiserver：作为kubernetes系统的入口，封装了核心对象的增删改查操作，以RESTFul接口方式提供给外部客户和内部组件调用。它维护的REST对象将持久化到etcd（一个分布式强一致性的key/value存储）。
+* scheduler：负责集群的资源调度，为新建的pod分配机器。这部分工作分出来变成一个组件，意味着可以很方便地替换成其他的调度器。
+* controller-manager：负责执行各种控制器，目前有两类：
+
+	endpoint-controller：定期关联service和pod(关联信息由endpoint对象维护)，保证service到pod的映射总是最新的。
+	replication-controller：定期关联replicationController和pod，保证replicationController定义的复制数量与实际运行pod的数量总是一致的。
+
+
+
+
+minion运行两个组件：
+
+
+* kubelet：负责管控docker容器，如启动/停止、监控运行状态等。它会定期从etcd获取分配到本机的pod，并根据pod信息启动或停止相应的容器。同时，它也会接收apiserver的HTTP请求，汇报pod的运行状态。
+
+
+* proxy：负责为pod提供代理。它会定期从etcd获取所有的service，并根据service信息创建代理。当某个客户pod要访问其他pod时，访问请求会经过本机proxy做转发。
+
+
+除了建立cluster中master node和minion nodes对应的服务外，这个demo还需要安装OVS以及linux bridge。
+
+kubernetes的cluster部署结构如下图：
+
+
+![kubernetes cluster deployment](https://d17oy1vhnax1f7.cloudfront.net/items/420q2D2g1f1F3L2Y260O/kubernetes%20OVS%20cluster%20deployment.png?v=18a160e2)
+
+
+图 kubernetes cluster deployment
+
+
+这里master的性能除了运行管理服务以外，足够性能来运行业务负载，所以可以担当双重角色，master/minion。
+
+![Detail host networking deployment](https://d17oy1vhnax1f7.cloudfront.net/items/2C1T2H1s1R3S1j0P2p2b/Detail%20host%20networking%20deployment1.png?v=486a7cab)
+
+![Detail host networking deployment](https://d17oy1vhnax1f7.cloudfront.net/items/3J1T2B0y3p1w39431Z3X/Detail%20host%20networking%20deployment2.png?v=bc957553)
+
+图 Detail host networking deployment
+
+
+每个host上通过vxlan进行host间通信，提供overlay网络能力，适应多节点，多数据中心的需求。
+
+部署Dashboard以及DNS。
+
+系统管理可以通过命令行，或者图形界面。命令行主要通过kubectl进行。图形界面使用kubernetes提供dashboard，以虚拟机形式部署。
+
+![command line management](https://d17oy1vhnax1f7.cloudfront.net/items/440f312I1B2o0V322T1b/command%20line%20management.png?v=36ff4d58)
+
+图 command line management
+
+![GUI management](https://d17oy1vhnax1f7.cloudfront.net/items/1x0q2Y1N2R453w2a173K/GUI%20management.png?v=2018414f)
+
+图 GUI management
+
+特别步骤：
+
+
+
+- 这里因为需要通过master的eth1作为外部访问入口，而eth1连接到ovs上，所以需要在master上将eth1的子网路由添加到连接pod的桥上。
+
+
+
+- 创建虚拟机时，因为墙的原因，gcr.io无法访问。创建虚拟机会挂在获取镜像上。
+
+这里可以使用国内的镜像hub，比如docker.io，tenxcloud.com，或者aliyuncs.com。
+
+但这仍然有问题pause似乎是内置镜像，仍然需要人工预先获取：
+
+	sudo docker pull index.tenxcloud.com/google_containers/pause-amd64:3.0
+    sudo docker tag index.tenxcloud.com/google_containers/pause-amd64:3.0 gcr.io/google_containers/pause-amd64:3.0
+
+
+
+- 另外，这里创建的linux bridge，每次新建虚拟机之后就会打开hairpin，进行包复制转发。必须每次都关掉，否则整个系统都不通，没找到是什么问题。
+
+**3，Deploy ubuntu vm on kubernetes**
+          
+如果单独通过flannel或者vxlan建立host间通信通道，部署ubuntu就需要配置所需要的服务端口。
+
+kubernetes提供几种方式供端口进行映射，可以使用主机端口，那么部署操作系统这种虚拟机就因为端口限制，一个host只能部署一个vm。也可以使用pod端口进行nat，但这样有需要改变用户习惯，知名端口都需要改到特殊端口上去。
+
+所以这也是选择OVS的原因，所有端口都可以选择开放，标准服务，telnet，ssh，甚至vnc都可以开发。
+
+简单的部署：
+
+	apiVersion: v1
+
+	kind: Pod
+	metadata:
+  		labels:
+    		pod-template-hash: "4174364055"
+    		run: my-ubuntu
+  		name: my-ubuntu
+  		namespace: default
+	spec:
+  		containers:
+  		- image: registry.cn-hangzhou.aliyuncs.com/docker/ubuntu14.04:latest 
+    	  imagePullPolicy: Always
+    	  name: my-ubuntu
+    	  ports:
+    	  - containerPort: 23
+            protocol: TCP
+    	  stdin: true
+    	  tty: true
+  		dnsPolicy: ClusterFirst
+  		nodeName: 172.17.4.101
+  		restartPolicy: Never
+
+这里只使用标准的ubuntu镜像建立虚拟机，所以需要登录进行设置：
+               
+     sudo docker ps     -----check running container
+     sudo docker attach dockerid    ----enter container
+     passwd         ----create init password
+     install needed service:
+     sudo apt-get install vnc4server
+     vncserver
+     sudo apt-get install openssh-server
+     sudo service --status-all
+     sudo service ssh start
+
+
+可以把标准环境输出成docker image，然后重复部署。
+
+**4, Deploy demo on kubernets**
+
+这里IoT cloud的平台可以提供多种连接方式和已有服务，比如CoAP，MQTT，Http，Websocket，tcp等等。复杂的协议可以提供更适合复杂场景的服务，比如订阅和发布，适合大量设备配置下发和部署的情况。
+
+IoT cloud目前能提供的部分协议情况
+
+	.
+	├── config
+	│   └── config.go
+	├── data
+	│   └── data.go
+	├── data_process	
+	│   ├── data_process
+	│   ├── dev_data_rcv.go
+	│   └── dev_data_rcv_test.go
+	├── http_process
+	│   ├── http_process
+	│   ├── http_process.go
+	│   ├── public
+	│   └── templates
+	├── protocal
+	│   ├── CoAP
+	│   └── MQTT
+	├── radis-op
+	│   └── radis_op.go
+	├── tcp_server
+	│   ├── tcp_server.go
+	│   └── tcp_server_test.go
+	└── testclient
+    ├── clientontcp.go
+    └── echo
+         
+这里demo使用tcp server传输简单数据。Tcp server使用golang创建，设备端可以通过c的tcp client传输特定格式数据。
+
+数据库使用radis，并通过golang进行数据库操作。
+
+http server使用golang martini框架搭建。
+
+数据显示端使用jquery+highchart进行显示。
+          
+
+框架图如下:
+
+![demo framework](https://d17oy1vhnax1f7.cloudfront.net/items/2L0L0y3Q2C0D2N2O3Q2Q/demo%20framework.png?v=b44bfa7f)
+
+图 demo framework
+
+用户界面:
+
+![GUI](https://d17oy1vhnax1f7.cloudfront.net/items/1S2l2x3C071v0l0w0k28/GUI.png?v=4b2b24d4)
+
+图 GUI
+
+温度显示:
+
+![temp display](https://d17oy1vhnax1f7.cloudfront.net/items/052I183D3k09112x2X3b/temp%20display.png?v=a381302f)
+
+图 display
+
+
+IoT cloud可以以平台形式提供，提供虚拟机部署及管理，提供通信协议，提供数据库，
