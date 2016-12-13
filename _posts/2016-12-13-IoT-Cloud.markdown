@@ -196,37 +196,37 @@ ____
 	end
 
 	Vagrant.configure("2") do |config|
-  		# always use Vagrant's insecure key
-  		config.ssh.insert_key = false
+		# always use Vagrant's insecure key
+		config.ssh.insert_key = false
 
-  		config.vm.box = "ubuntu/trusty64" #"ubuntu-docker"
-  		config.vm.box_version = ">= 0"
+		config.vm.box = "ubuntu/trusty64" #"ubuntu-docker"
+		config.vm.box_version = ">= 0"
 
-  		config.vm.provider :virtualbox do |v|
+		config.vm.provider :virtualbox do |v|
     		# On VirtualBox, we don't have guest additions or a functional vboxsf
     	v.check_guest_additions = false
     	v.functional_vboxsf     = false
-  	end
+	end
 
   	# plugin conflict
-  	if Vagrant.has_plugin?("vagrant-vbguest") then
+	if Vagrant.has_plugin?("vagrant-vbguest") then
     	config.vbguest.auto_update = false
-  	end
+	end
 
-  	["vmware_fusion", "vmware_workstation"].each do |vmware|
+	["vmware_fusion", "vmware_workstation"].each do |vmware|
     	config.vm.provider vmware do |v|
       	v.vmx['numvcpus'] = 2
       	v.gui = false
     	end
-  	end
+	end
 
-  	config.vm.provider :virtualbox do |vb|
+	config.vm.provider :virtualbox do |vb|
     	vb.cpus = 2
     	vb.gui = false
-  	end
+	end
 
 
-  	(1..$apiserver_count).each do |i|
+	(1..$apiserver_count).each do |i|
     	config.vm.define vm_name = "apiserver%d" % i do |apiserver|
 
       		apiserver.vm.hostname = vm_name
@@ -250,9 +250,9 @@ ____
       		provisionMachineSSL(apiserver,"apiserver","kube-apiserver-#{apiserverIP}",apiserverIPs)
 
     	end
-  	end
+	end
 
-  	(1..$minion_count).each do |i|
+	(1..$minion_count).each do |i|
     	config.vm.define vm_name = "minion%d" % i do |minion|
       		minion.vm.hostname = vm_name
 
@@ -272,7 +272,7 @@ ____
       		provisionMachineSSL(minion,"worker","kube-worker-#{minionIP}",[minionIP])
 
     	end
-  	end
+	end
 
 	end
 
