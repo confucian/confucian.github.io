@@ -7,11 +7,18 @@ date: 2016-12-13 10:22:22 +08:00
 tags: 
     docker IoT cloud
 ---
+
+**得用云**
+
 IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长的连通性，通过互联网进行连接的各种各样的嵌入式传感器、设备及系统。IoT不仅包括现有的机器间通信，并延伸包括更多的分析及面向消费者的产品，从Google Glass到智能电器，在到生产环节的各种设备控制及分析。
  
 如何实现这种快速连通，利用现有IT资源，通过云来实现资源的动态扩容，快速部署，合理应用是当前的大趋势。
+
 ***
-那是基于公有云还是私有云？公有云必然是资源最合理的应用，但是私有云有其存在的优势：
+
+**用啥云**
+
+那是基于公有云还是私有云？公有云必然是资源最合理的应用，balabala，但是私有云有其存在的优势：
 
 1，安全性
 
@@ -30,10 +37,39 @@ IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长�
 云不是万能的，这份调查显示当前的私有云依然有很大的发展趋势。Gartner 资深分析师Tom Bittman ：“每个云服务都将有不同的未来发展路线图--一些云服务应与业务更紧密地整合、定制化和多样化为重点。而另外一些应侧重在独立、简单接口、标准化和非 定制化上。私有云计算中的许多投资可为企业部署公共云计算做准备。这些投资不仅仅是技术上的变化，也是流程、文化和业务接口上的变化。决定这些改变宜早不宜迟，这将帮助企业更好地实施云采购的决策，同时也很可能使企业顺利地过渡到公共云计算上。
 
 搭建私有云，现在有很多商业化选择，比如openstack的商业化版本，基于kvm的虚拟化。很多知名大企业都提供系统解决方案。所谓无利不起早，搭建成本和开销都可想而知。伺候大企业，比如中移动，中联通这种还尚且能提供优惠，比如开发免费，部署优惠，目的无非是占领市场，建立生态圈，提高后来者的技术和非技术门槛。所以对于小企业，无论是成本，技术复杂度，还是开销，都是无法接受的。
+
 *** 
+
+**IoT云需要什么**
+
+几个关键部件和功能组成：
+
+
+- 	基础运行框架。包括虚拟化技术基础上的多接入，多并发，弹性伸缩，服务备份，自动化运维，快速部署升级等等。
+-	基础服务。为应用提供基础平台服务，比如连接协议，CoAP，MQTT，HTTP，webSocket，tcpip等，数据存储服务，比如mysql，etcd，redis等，提供丰富的云服务，以及服务集成框架。
+-	数据通用：物联网云平台从概念上讲，就是“将企业的数据实时、高效的保存在安全稳定的云系统中，当企业有需要时，再将数据取回，以供分析。
+
+再此基础上，方便集成和部署各种功能，采集、存储信息并进行计算、展示，灵活拓展应用模式
+
+***
+
+**虚拟化技术选择**
+
 这里就要提到container虚拟化，docker及其相应的部署技术，kubernetes，提供了一套低成本，低复杂度，低开销的虚拟化部署方案。
- 
-下列架构图展示了数据中心层和网关端的相关组件。下文架构详情一节提供了进一步介绍。
+
+Docker是基于堆叠文件系统建立的，所以虚拟机应用开发可以只发布增量部分，建立在已有的镜像基础上。虚拟应用的发布镜像小，速度快。
+
+运行占用资源小很多，这意味着不只能部署在服务器上，而且小型pc，甚至于公有云上的vhost上都可以部署，并得到接近原host的性能。这使得基于container的虚拟化不只适用于本地构建私有云，甚至在公有云基础上再构建公有云服务也是非常便利的。
+
+Kubernetes可以用来对docker进行编排，调度，进行规模化，分布式的运维管理。
+
+关于docker和kubernetes，资料无数，google+baidu。
+
+***
+
+**云用起来是啥样的**
+
+下图展示了在数据中心的云和在本地的网关/设备/传感器的关系。
 
 ![High Level Architecture](https://d17oy1vhnax1f7.cloudfront.net/items/1g3t032i1f2J3l2P3F39/High%20Level%20Architecture.png?v=6f0b28c5)
 图1: High Level Architecture    
@@ -64,13 +100,19 @@ IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长�
    
  而小开销的container初始化则可以部署在cloud侧，gateway上甚至中断嵌入式设备中。同时虚拟化下沉到网关甚至设备侧，可以通过享受统一部署（比如kubernetes统一管理），以及微服务隔离（比如docker container隔离），动态减扩容等好处。
    
- 所以如果KVM虚拟化只适合上图中部署方式1的话，基于container的虚拟化则3中部署方式都使用。
+ 所以如果KVM虚拟化只适合上图中部署方式1的话，基于container的虚拟化则3种部署方式都使用。
+
 
 ![Cloud Gateway Detail](https://d17oy1vhnax1f7.cloudfront.net/items/0p0d3U0Y0k1m252B2k0L/Cloud%20Gateway%20Detail.png?v=f046d676)
 
 图2: Cloud/Gateway Detail
 
  具体到container虚拟化的cloud，gateway或者设备，采用kubernetes部署的方式，通过service进行服务和后端虚拟服务的隔离以及初步的负载均衡。这样保证服务的稳定性，扩容便利，升级便利以及新服务便利部署。
+
+
+***
+
+ 尽管可以公私皆可，但这里还是以搭建本地私有云为例，以container虚拟化来部署私有云做一个demo。
    
  所以这里我尝试搭建了一套基于kubernetes的虚拟化IoT平台demo。
    
@@ -101,6 +143,8 @@ IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长�
 ![demo architechture](https://d17oy1vhnax1f7.cloudfront.net/items/0C262f0G0G2J1X3j2M1x/demo%20architecture.png?v=65066208)
 
 图 demo architecture
+
+~~~~
 
  基本原材料：
    
@@ -134,7 +178,8 @@ IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长�
         制作以标准ubuntu 14.04安装docker组件为初始镜像
         以ubuntu/trusty64为镜像启动标准ubuntu 14.04
         在镜像中安装docker
-————
+
+~~~~
  
 	1. sudo  apt-get update
 	2. sudo apt-get install apt-transport-https ca-certificates
@@ -151,7 +196,11 @@ IoT，物联网，是为了实现万物互联，阻碍和途径是快速增长�
  	
 	vagrant package --base basevm --output boxname
 	vagrant box add "box show name" "box path and name"
-____
+
+~~~~
+
+
+vagrantFile：
 
 	# -*- mode: ruby -*-
 	# # vi: set ft=ruby :
@@ -282,6 +331,7 @@ ____
 	1.4 如果是部署在物理机上，或者公有云上的vhost上，那一般可以购买loadbalancer来提供外部访问的入口。简单功能性demo的情况下，只是vm组成的host，没有外部的loadbalancer，这里就开放master上的eth1给外部访问。
 
 	1.5 虚拟机cluster的环境下，通过vagrant和virtualbox组建，实际通信是通过默认的vboxnet0实现的。简单模拟外部访问和管理网络，使master上eth1通过vboxnet1访问。这里需要设置路由，将eth1网段路由添加到vboxnet1上去，同时master上的路由也需要修改。
+
 
 ***
 
@@ -475,4 +525,8 @@ http server使用golang martini框架搭建。
 图 display
 
 
-IoT cloud可以以平台形式提供，提供虚拟机部署及管理，提供通信协议，提供数据库，
+***
+
+简单，但展示可以便利部署的云平台足够了，隐藏多数细节了
+
+**Done**
